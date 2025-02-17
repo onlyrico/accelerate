@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2021 The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +24,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import Compose, RandomResizedCrop, Resize, ToTensor
 
 from accelerate import Accelerator
+from accelerate.utils import set_seed
 
 
 ########################################################################
@@ -94,10 +94,7 @@ def training_function(config, args):
     label_to_id = {lbl: i for i, lbl in enumerate(id_to_label)}
 
     # Set the seed before splitting the data.
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
+    set_seed(seed)
     # Split our filenames between train and validation
     random_perm = np.random.permutation(len(file_names))
     cut = int(0.8 * len(file_names))
@@ -181,6 +178,7 @@ def training_function(config, args):
         eval_metric = accurate.item() / num_elems
         # Use accelerator.print to print only on the main process.
         accelerator.print(f"epoch {epoch}: {100 * eval_metric:.2f}")
+    accelerator.end_training()
 
 
 def main():
@@ -190,7 +188,7 @@ def main():
         "--mixed_precision",
         type=str,
         default=None,
-        choices=["no", "fp16", "bf16"],
+        choices=["no", "fp16", "bf16", "fp8"],
         help="Whether to use mixed precision. Choose"
         "between fp16 and bf16 (bfloat16). Bf16 requires PyTorch >= 1.10."
         "and an Nvidia Ampere GPU.",
